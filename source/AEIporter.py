@@ -1,4 +1,5 @@
-import os
+from os import path
+from os import listdir
 import tkinter as tk
 from tkinter import filedialog, messagebox, OptionMenu
 from PIL import Image
@@ -9,39 +10,42 @@ from AEPi.exceptions import AEPiException
 from AEPi.codec import compressorFor
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
-def convert_to_aei(png_file_path, dest_folder_path, compression_format, overwrite=False, verbose=False):
+def convert_to_aei(png_file_path, dest_folder_path, compression_format, overwrite=False, verbose=False, silent=False, counter=0):
     try:
         compression_format_enum = getattr(CompressionFormat, compression_format)
     except AttributeError:
-        messagebox.showerror("Error", "Invalid compression format.")
+        if silent == False: messagebox.showerror("Error", "Invalid compression format.")
         print("Invalid compression format.")
-        return
+        return -1
 
-    if not os.path.isfile(png_file_path):
-        messagebox.showerror("Error", "Invalid PNG file path.")
+    if not path.isfile(png_file_path):
+        if silent == False: messagebox.showerror("Error", "Invalid PNG file path.")
         print("Invalid PNG file path.")
-        return
+        return -1
 
     # Open the PNG file
     with Image.open(png_file_path) as png_image:
         # Create a new AEI file
         with AEI(png_image) as new_aei:
-            aei_file_path = os.path.join(dest_folder_path, os.path.splitext(os.path.basename(png_file_path))[0] + ".aei")
+            aei_file_path = path.join(dest_folder_path, path.splitext(path.basename(png_file_path))[0] + ".aei")
             # Check if the file already exists and overwrite is not enabled
-            if not overwrite and os.path.exists(aei_file_path):
+            if not overwrite and path.exists(aei_file_path):
                 if verbose:
-                    print(f"Skipping {os.path.basename(png_file_path)} (AEI file already exists).")
-                return
+                    print(f"Skipping {path.basename(png_file_path)} (AEI file already exists).")
+                return 0
             # Write the AEI file to disk
             with open(aei_file_path, "wb") as aei_file:
                 # Write in specified compression format
                 new_aei.write(aei_file, format=compression_format_enum)
+            counter += 1
             if verbose:
-                print(f"Converted {os.path.basename(png_file_path)} to {os.path.basename(aei_file_path)}")
-
-def convert_to_png(aei_file_path, dest_folder_path, overwrite=False, verbose=False):
-    if not os.path.isfile(aei_file_path):
-        messagebox.showerror("Error", "Invalid AEI file path.")
+                print(f"Converted {path.basename(png_file_path)} to {path.basename(aei_file_path)}")
+                
+    return counter
+    
+def convert_to_png(aei_file_path, dest_folder_path, overwrite=False, verbose=False, silent=False, counter=0):
+    if not path.isfile(aei_file_path):
+        if silent == False: messagebox.showerror("Error", "Invalid AEI file path.")
         print("Invalid AEI file path.")
         return
     
@@ -50,58 +54,65 @@ def convert_to_png(aei_file_path, dest_folder_path, overwrite=False, verbose=Fal
     try:
         aei = AEI.read(aei_file_path)
     except AEPiException as ex:
-        messagebox.showerror("Error",f"Failed to read {aei_file_path} with {type(ex).__name__}: '{ex}'")
+        if silent == False: messagebox.showerror("Error",f"Failed to read {aei_file_path} with {type(ex).__name__}: '{ex}'")
         print(f"Failed to read {aei_file_path} with {type(ex).__name__}: '{ex}'")
-        return
+        return -1
     with aei:
         # Iterate through textures
         for i, tex in enumerate(aei.textures):
             # Get texture as Pillow Image
             with aei.getTexture(tex) as im:
                 # Construct PNG file path using AEI file name
-                png_file_name = f"{os.path.splitext(os.path.basename(aei_file_path))[0]}_{i}.png"
-                png_file_path = os.path.join(dest_folder_path, png_file_name)
+                png_file_name = f"{path.splitext(path.basename(aei_file_path))[0]}_{i}.png"
+                png_file_path = path.join(dest_folder_path, png_file_name)
                 # Check if file exists and overwrite is not enabled
-                if not overwrite and os.path.exists(png_file_path):
+                if not overwrite and path.exists(png_file_path):
                     if verbose:
                         print(f"Skipping {png_file_name} (File already exists).")
-                    continue
+                    continue 
                 # Save the texture as PNG
                 im.save(png_file_path)
+                counter += 1
                 if verbose:
-                    print(f"Converted texture {i} of {os.path.basename(aei_file_path)} to {png_file_name}")
-
-def convert_folder_to_aei(src_folder_path, dest_folder_path, compression_format, overwrite=False, verbose=False):
-    if not os.path.isdir(src_folder_path):
-        messagebox.showerror("Error", "Invalid source folder path.")
-        print("Invalid source folder path.")
+                    print(f"Converted texture {i} of {path.basename(aei_file_path)} to {png_file_name}")
+    return counter
+    
+def convert_folder_to_aei(src_folder_path, dest_folder_path, compression_format, overwrite=False, verbose=False, silent=False):
+    if not path.isdir(src_folder_path):
+        if silent == False: messagebox.showerror("Error", "Invalid source PNGs' folder path.")
+        print("Invalid source PNG folder path.")
         return
-
-    # Iterate through files in the source folder
-    for filename in os.listdir(src_folder_path):
+    
+    file_counter = 0 
+    for filename in listdir(src_folder_path):
         if filename.lower().endswith('.png'):
             # Construct paths for PNG and AEI files
-            png_file_path = os.path.join(src_folder_path, filename)
-            aei_file_name = f"{os.path.splitext(filename)[0]}.aei"
-            aei_file_path = os.path.join(dest_folder_path, aei_file_name)
+            png_file_path = path.join(src_folder_path, filename)
+          #  aei_file_name = f"{path.splitext(filename)[0]}.aei"
+          #  aei_file_path = path.join(dest_folder_path, aei_file_name)
+        
+            # Convert each PNG file to AEI, update converted files counter
+            file_counter = convert_to_aei(png_file_path, dest_folder_path, compression_format, overwrite=overwrite, verbose=verbose, silent=silent, counter=file_counter)
+    if silent == False:
+        if verbose: messagebox.showinfo("Info", f"Coverted PNG to AEI in count of {file_counter}.\nScr: {src_folder_path}\nDst: {dest_folder_path}")
+        else: messagebox.showinfo("Info", f"Coverted PNG to AEI in count of {file_counter}.")
+    if verbose: print(f"Converting {file_counter}x PNG2AEI over.")
 
-            # Convert each PNG file to AEI
-            convert_to_aei(png_file_path, aei_file_path, compression_format, overwrite=overwrite, verbose=verbose)
 
-    messagebox.showinfo("Info", "Conversion over.")
-    print("Conversion over.")
-
-
-def convert_folder_to_png(folder_path, dest_folder_path, overwrite=False, verbose=False):
-    if not os.path.isdir(folder_path):
-        messagebox.showerror("Error", "Invalid source folder path.")
-        print("Invalid source folder path.")
+def convert_folder_to_png(src_folder_path, dest_folder_path, overwrite=False, verbose=False, silent=False):
+    if not path.isdir(src_folder_path):
+        if silent == False: messagebox.showerror("Error", "Invalid source AEIs' folder path.")
+        print("Invalid source AEI folder path.")
         return
-
-    for filename in os.listdir(folder_path):
+    file_counter = 0    
+    for filename in listdir(src_folder_path):
         if filename.lower().endswith('.aei'):
-            aei_file_path = os.path.join(folder_path, filename)
-            convert_to_png(aei_file_path, dest_folder_path, overwrite=overwrite, verbose=verbose)
+            aei_file_path = path.join(src_folder_path, filename)
+            file_counter = convert_to_png(aei_file_path, dest_folder_path, overwrite=overwrite, verbose=verbose, silent=silent, counter=file_counter)
+    if silent == False:
+        if verbose: messagebox.showinfo("Info", f"Coverted AEI to PNG in count of {file_counter}.\n\nScr: {src_folder_path}\n\nDst: {dest_folder_path}")
+        else: messagebox.showinfo("Info", f"Coverted AEI to PNG in count of {file_counter}.")
+    if verbose: print(f"Converting AEI2PNG {file_counter}x over.")
 
 def convert_files():
     conversion_type = conversion_var.get()
@@ -113,50 +124,51 @@ def convert_files():
     compression_format = compression_var.get()
     overwrite = overwrite_var.get()
     verbose = verbose_var.get()
-
-    if not dest_folder_path or not os.path.isdir(dest_folder_path):
-        messagebox.showerror("Error", "Please select a valid destination folder.")
+    silent = silent_var.get()
+    
+    if not dest_folder_path or not path.isdir(dest_folder_path):
+        if silent == False: messagebox.showerror("Error", "Please select a valid destination folder.")
         print("Please select a valid destination folder.")
         return
 
     if conversion_type == "AEI to PNG":
         if is_folder_convert:
-            if not os.path.isdir(src_folder_path):
-                messagebox.showerror("Error", "Invalid source folder path.")
+            if not path.isdir(src_folder_path):
+                if silent == False: messagebox.showerror("Error", "Invalid source folder path.")
                 print("Invalid source folder path.")
                 return
             convert_folder_to_png(src_folder_path, dest_folder_path, overwrite=overwrite, verbose=verbose)
         else:
-            if not os.path.isfile(src_aei_file_path):
-                messagebox.showerror("Error", "Invalid AEI file path.")
+            if not path.isfile(src_aei_file_path):
+                if silent == False: messagebox.showerror("Error", "Invalid AEI file path.")
                 print("Invalid AEI file path.")
                 return
             # Check if the file is a valid AEI file
             if not src_aei_file_path.endswith(".aei"):
-                messagebox.showerror("Error", "The selected file is not an AEI file.")
+                if silent == False: messagebox.showerror("Error", "The selected file is not an AEI file.")
                 print("The selected file is not an AEI file.")
                 return
             convert_to_png(src_aei_file_path, dest_folder_path, overwrite=overwrite, verbose=verbose)
     else:  # PNG to AEI
         if is_folder_convert:
-            if not os.path.isdir(src_folder_path):
-                messagebox.showerror("Error", "Invalid source folder path.")
+            if not path.isdir(src_folder_path):
+                if silent == False: messagebox.showerror("Error", "Invalid source folder path.")
                 print("Invalid source folder path.")
                 return
             convert_folder_to_aei(src_folder_path, dest_folder_path, compression_format, overwrite=overwrite, verbose=verbose)
         else:
-            if not os.path.isfile(src_png_file_path):
-                messagebox.showerror("Error", "Invalid PNG file path.")
+            if not path.isfile(src_png_file_path):
+                if silent == False: messagebox.showerror("Error", "Invalid PNG file path.")
                 print("Invalid PNG file path.")
                 return
             # Check if the file is a valid PNG file
             if not src_png_file_path.endswith(".png"):
-                messagebox.showerror("Error", "The selected file is not a PNG file.")
+                if silent == False: messagebox.showerror("Error", "The selected file is not a PNG file.")
                 print("The selected file is not a PNG file.")
                 return
             convert_to_aei(src_png_file_path, dest_folder_path, compression_format, overwrite=overwrite, verbose=verbose)
     
-    messagebox.showinfo("Info", "Conversion over.")
+    if silent == False: messagebox.showinfo("Info", "Conversion over.")
     print("Conversion over.")
 
 def browse_src_aei_file(event=None):
@@ -168,7 +180,7 @@ def browse_src_aei_file(event=None):
         src_aei_entry.delete(0, tk.END)
         src_aei_entry.insert(0, file_path)
         if not dest_folder_entry.get():
-            dest_folder_entry.insert(0, os.path.dirname(file_path))
+            dest_folder_entry.insert(0, path.dirname(file_path))
 
 def browse_src_png_file(event=None):
     if event and event.data:
@@ -179,7 +191,7 @@ def browse_src_png_file(event=None):
         src_png_entry.delete(0, tk.END)
         src_png_entry.insert(0, file_path)
         if not dest_folder_entry.get():
-            dest_folder_entry.insert(0, os.path.dirname(file_path))
+            dest_folder_entry.insert(0, path.dirname(file_path))
 
 def browse_src_folder(event=None):
     if event and event.data:
@@ -203,16 +215,20 @@ def browse_dest_folder(event=None):
 
 # Create GUI window
 root = TkinterDnD.Tk()
-root.title("AEIporter - 2024.05.04")
+root.title("AEIporter - 2024.05.10")
 
 # Frame for conversion type selection
 conversion_frame = tk.Frame(root)
 conversion_frame.pack(pady=10)
 
+folder_var = tk.BooleanVar(value=False)
+tk.Checkbutton(conversion_frame, text="Convert Whole Folder", variable=folder_var).pack(side=tk.LEFT, padx=5)
+overwrite_var = tk.BooleanVar()
+
 conversion_var = tk.StringVar(root)
 conversion_var.set("AEI to PNG")
-tk.Radiobutton(conversion_frame, text="AEI to PNG", variable=conversion_var, value="AEI to PNG").grid(row=0, column=0, padx=5)
-tk.Radiobutton(conversion_frame, text="PNG to AEI", variable=conversion_var, value="PNG to AEI").grid(row=0, column=1, padx=5)
+tk.Radiobutton(conversion_frame, text="AEI -> PNG", variable=conversion_var, value="AEI to PNG").pack(side=tk.LEFT, padx=5)
+tk.Radiobutton(conversion_frame, text="PNG -> AEI", variable=conversion_var, value="PNG to AEI").pack(side=tk.LEFT, padx=5)
 
 # Frame for source file/folder selection
 src_frame = tk.Frame(root)
@@ -260,12 +276,12 @@ dest_folder_entry.dnd_bind('<<Drop>>', browse_dest_folder)
 options_frame = tk.Frame(root)
 options_frame.pack(pady=10)
 
-folder_var = tk.BooleanVar(value=False)
-tk.Checkbutton(options_frame, text="Convert Whole Folder", variable=folder_var).pack(side=tk.LEFT, padx=5)
-overwrite_var = tk.BooleanVar()
+
 tk.Checkbutton(options_frame, text="Overwrite Existing Files", variable=overwrite_var).pack(side=tk.LEFT, padx=5)
 verbose_var = tk.BooleanVar()
 tk.Checkbutton(options_frame, text="Verbose Output", variable=verbose_var).pack(side=tk.LEFT, padx=5)
+silent_var = tk.BooleanVar()
+tk.Checkbutton(options_frame, text="Silent Popups", variable=silent_var).pack(side=tk.LEFT, padx=5)
 
 # Frame for compression format selection
 compression_frame = tk.Frame(root)
