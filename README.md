@@ -2,6 +2,9 @@
 Tool for converting Abyss Engine images to Portable Network Graphics, AEi2PNG in short, and PNG2AEi.
 
 Requiers Python 3... (you will be safe with 3.11)
+```python
+pip install -r requirements.txt
+```
 
 ### What works:
 - Converting single AEI <-> PNG of AEPi supported formats (automaticaly detected).
