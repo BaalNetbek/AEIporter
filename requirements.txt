@@ -1,0 +1,4 @@
+aepi
+tkinterdnd2
+tk
+pillow
