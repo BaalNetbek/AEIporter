@@ -1,6 +1,9 @@
 # AEIporter
 Tool for converting Abyss Engine images to Portable Network Graphics, AEi2PNG in short, and PNG2AEi.
 
+![obraz](https://github.com/BaalNetbek/AEIporter/assets/157546829/aeb86ac6-1151-4455-8b46-dbaf383abe00)
+
+
 Requiers Python 3... (you will be safe with 3.11)
 ```python
 pip install -r requirements.txt
