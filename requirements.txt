@@ -1,4 +1,3 @@
 aepi
-tkinterdnd2
-tk
+PyQt6
 pillow
