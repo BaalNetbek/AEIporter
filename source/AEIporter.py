@@ -377,7 +377,7 @@ class AEIporterApp(QMainWindow):
                             print(f"Converted texture {i} of {path.basename(aei_file_path)} to {png_file_name}")
         return counter
 
-    def convert_folder_to_aei(self, src_folder_path, dest_folder_path, compression_format, overwrite=False, verbose=False, popups=False):
+    def convert_folder_to_aei(self, src_folder_path, dest_folder_path, compression_format, overwrite=False, verbose=False, popups=False, is_aei_to_aei=False):
         if not path.isdir(src_folder_path):
             if popups:
                 self.show_message("Error", "Invalid source PNGs' folder path.", error=True)
@@ -385,14 +385,18 @@ class AEIporterApp(QMainWindow):
             return
 
         file_counter = 0
+        ext = '.aei' if is_aei_to_aei else '.png'
         for filename in listdir(src_folder_path):
-            if filename.lower().endswith('.png'):
+            if filename.lower().endswith(ext):
                 png_file_path = path.join(src_folder_path, filename)
-                file_counter = self.convert_to_aei(png_file_path, dest_folder_path, compression_format, overwrite=overwrite, verbose=verbose, popups=popups, counter=file_counter)
+                file_counter = self.convert_to_aei(png_file_path, dest_folder_path, compression_format, overwrite=overwrite, verbose=verbose, popups=popups, counter=file_counter, is_aei_to_aei=is_aei_to_aei)
         if popups:
             self.show_message("Info", f"Converted PNG to AEI in count of {file_counter}.")
         if verbose:
-            print(f"Converting {file_counter}x PNG2AEI over.")
+            if is_aei_to_aei:
+                print(f"Converting {file_counter}x AEI2AEI over.")
+            else:
+                print(f"Converting {file_counter}x PNG2AEI over.")
 
     def convert_folder_to_png(self, src_folder_path, dest_folder_path, overwrite=False, verbose=False, popups=False):
         if not path.isdir(src_folder_path):
