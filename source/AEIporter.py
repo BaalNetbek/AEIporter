@@ -428,8 +428,12 @@ class AEIporterApp(QMainWindow):
             print(f"Failed to read compression format: {e}")
 
 
-if __name__ == "__main__":
+def _runGui():
     app = QApplication(sys.argv)
     window = AEIporterApp()
     window.show()
     sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    _runGui()
