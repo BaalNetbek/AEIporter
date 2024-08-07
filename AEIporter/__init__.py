@@ -4,7 +4,7 @@ from . import AEIporter
 
 __version__ = "0.0.1"
 
-def aeiporter_cli():
+def _open_aeiporter_gui():
     '''
     command-line interface
     '''
