@@ -2,7 +2,7 @@
 
 from . import AEIporter
 
-__version__ = "0.0.1"
+__version__ = "2024.08.03"
 
 def _open_aeiporter_gui():
     '''
